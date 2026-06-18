@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionFlow - DSL for Computer Vision Preprocessing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f9fafb;
+            --bg-dark: #111827;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Main Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        /* Sidebar - Blocks */
+        .sidebar {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .block-item {
+            background: var(--bg-light);
+            border: 2px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: move;
+            transition: all 0.2s;
+        }
+
+        .block-item:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .block-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .block-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Canvas - Middle */
+        .canvas {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            min-height: 500px;
+            border: 2px dashed var(--border-color);
+        }
+
+        .canvas.drag-over {
+            border-color: var(--primary);
+            background: #f0f4ff;
+        }
+
+        .canvas-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .canvas-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .canvas-title input {
+            font-size: 1.5rem;
+            font-weight: 600;
+            border: none;
+            border-bottom: 2px solid var(--border-color);
+            padding: 0.25rem 0.5rem;
+            flex: 0 1 300px;
+        }
+
+        .canvas-title input:focus {
+            outline: none;
+            border-bottom-color: var(--primary);
+        }
+
+        .source-input {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .source-input input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .source-input input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .pipeline-blocks {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pipeline-block {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 0.375rem;
+            padding: 1.25rem;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .pipeline-block.aspect-ratio {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .pipeline-block.frame-rate {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .pipeline-block.lens {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .block-type {
+            font-weight: 600;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .block-remove {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+
+        .block-remove:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .block-props {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .prop-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .prop-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            min-width: 80px;
+        }
+
+        .prop-input {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 3rem 1rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Right Panel - Code Preview */
+        .code-panel {
+            background: var(--bg-dark);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .code-panel h3 {
+            color: #4ade80;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-output {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #10b981;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .code-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .code-output::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        .code-output::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        /* Buttons */
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            border-color: var(--primary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar, .code-panel {
+                position: static;
+            }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        /* Examples */
+        .examples-section {
+            margin-top: 2rem;
+        }
+
+        .example-item {
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example-item:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateX(4px);
+        }
+
+        .example-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .example-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                🎬 VisionFlow
+            </div>
+            <div class="nav-buttons">
+                <button class="btn-secondary" onclick="app.exportCode()">Download Code</button>
+                <button class="btn-primary" onclick="app.showExamples()">Examples</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button class="btn-primary" onclick="app.newPipeline()">New Pipeline</button>
+            <button class="btn-secondary" onclick="app.clearPipeline()">Clear</button>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left Sidebar - Available Blocks -->
+            <aside class="sidebar">
+                <h3>Available Blocks</h3>
+                
+                <div class="block-item" draggable="true" ondragstart="app.dragStart(event)" data-type="ASPECT_RATIO">
+                    <div class="block-name">ASPECT_RATIO</div>
+                    <div class="block-desc">Adjust frame aspect ratio</div>
+                </div>
+
+                <div class="block-item" draggable="true" ondragstart="app.dragStart(event)" data-type="FRAME_RATE">
+                    <div class="block-name">FRAME_RATE</div>
+                    <div class="block-desc">Conform frame rate</div>
+                </div>
+
+                <div class="block-item" draggable="true" ondragstart="app.dragStart(event)" data-type="LENS">
+                    <div class="block-name">LENS</div>
+                    <div class="block-desc">Apply lens correction</div>
+                </div>
+
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+
+                <h3>Examples</h3>
+                <div class="examples-section">
+                    <div class="example-item" onclick="app.loadExample('video_prep')">
+                        <div class="example-name">Video Preprocessing</div>
+                        <div class="example-desc">16:9 + 24fps + lens correction</div>
+                    </div>
+                    <div class="example-item" onclick="app.loadExample('image_seq')">
+                        <div class="example-name">Image Sequence</div>
+                        <div class="example-desc">4:3 aspect ratio with padding</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center - Canvas -->
+            <main class="canvas" ondrop="app.drop(event)" ondragover="app.dragOver(event)" ondragleave="app.dragLeave(event)">
+                <div class="canvas-header">
+                    <div class="canvas-title">
+                        <span>PIPELINE</span>
+                        <input type="text" id="pipelineName" placeholder="pipeline_name" value="my_pipeline">
+                    </div>
+                    <div class="source-input">
+                        <label style="display: flex; align-items: center; font-weight: 500; min-width: 80px;">SOURCE</label>
+                        <input type="text" id="sourceInput" placeholder='e.g., "videos/*.mp4"' value='""'>
+                    </div>
+                </div>
+
+                <div id="pipelineBlocks" class="pipeline-blocks">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✨</div>
+                        <p>Drag blocks here to build your pipeline</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Panel - Code Preview -->
+            <aside class="code-panel">
+                <h3>Code Preview</h3>
+                <div class="code-output" id="codeOutput">
+PIPELINE my_pipeline
+    SOURCE ""
+END
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Examples Modal -->
+    <div id="examplesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Load Example</h2>
+            </div>
+            <div class="modal-body">
+                <p>Select an example pipeline to get started:</p>
+                <!-- Examples populated by JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="app.closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            blocks: [],
+            draggedBlock: null,
+
+            blockDefinitions: {
+                ASPECT_RATIO: {
+                    props: { target: '16:9', mode: 'fit' },
+                    color: 'aspect-ratio'
+                },
+                FRAME_RATE: {
+                    props: { target: '30fps' },
+                    color: 'frame-rate'
+                },
+                LENS: {
+                    props: { correct_distortion: 'true' },
+                    color: 'lens'
+                }
+            },
+
+            examples: {
+                video_prep: {
+                    name: 'Video Preprocessing',
+                    pipelineName: 'video_preprocessing',
+                    source: '"videos/*.mp4"',
+                    blocks: [
+                        { type: 'ASPECT_RATIO', props: { target: '16:9', mode: 'fit' } },
+                        { type: 'FRAME_RATE', props: { target: '24fps' } },
+                        { type: 'LENS', props: { correct_distortion: 'true' } }
+                    ]
+                },
+                image_seq: {
+                    name: 'Image Sequence',
+                    pipelineName: 'image_sequence',
+                    source: '"photos/*.jpg"',
+                    blocks: [
+                        { type: 'ASPECT_RATIO', props: { target: '4:3', mode: 'pad' } }
+                    ]
+                }
+            },
+
+            dragStart(event) {
+                this.draggedBlock = event.target.closest('.block-item');
+                event.dataTransfer.effectAllowed = 'copy';
+            },
+
+            dragOver(event) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                event.target.closest('.canvas')?.classList.add('drag-over');
+            },
+
+            dragLeave(event) {
+                if (event.target.closest('.canvas')) {
+                    event.target.closest('.canvas').classList.remove('drag-over');
+                }
+            },
+
+            drop(event) {
+                event.preventDefault();
+                event.target.closest('.canvas')?.classList.remove('drag-over');
+                
+                if (this.draggedBlock) {
+                    const blockType = this.draggedBlock.dataset.type;
+                    this.addBlock(blockType);
+                }
+            },
+
+            addBlock(type) {
+                const def = this.blockDefinitions[type];
+                const block = {
+                    id: Date.now(),
+                    type,
+                    props: { ...def.props }
+                };
+                this.blocks.push(block);
+                this.render();
+            },
+
+            removeBlock(id) {
+                this.blocks = this.blocks.filter(b => b.id !== id);
+                this.render();
+            },
+
+            updateBlockProp(id, key, value) {
+                const block = this.blocks.find(b => b.id === id);
+                if (block) {
+                    block.props[key] = value;
+                    this.updateCodePreview();
+                }
+            },
+
+            updatePipelineName() {
+                this.updateCodePreview();
+            },
+
+            updateSourceInput() {
+                this.updateCodePreview();
+            },
+
+            render() {
+                const container = document.getElementById('pipelineBlocks');
+                
+                if (this.blocks.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✨</div>
+                            <p>Drag blocks here to build your pipeline</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = this.blocks.map(block => `
+                        <div class="pipeline-block ${block.type.toLowerCase().replace('_', '-')}">
+                            <div class="block-header">
+                                <div class="block-type">${block.type}</div>
+                                <button class="block-remove" onclick="app.removeBlock(${block.id})">✕</button>
+                            </div>
+                            <div class="block-props">
+                                ${Object.entries(block.props).map(([key, value]) => `
+                                    <div class="prop-group">
+                                        <label class="prop-label">${key}:</label>
+                                        <input type="text" class="prop-input" value="${value}"
+                                            onchange="app.updateBlockProp(${block.id}, '${key}', this.value)">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                this.updateCodePreview();
+            },
+
+            updateCodePreview() {
+                const name = document.getElementById('pipelineName').value || 'pipeline';
+                const source = document.getElementById('sourceInput').value || '""';
+                
+                let code = `PIPELINE ${name}\n    SOURCE ${source}\n`;
+                
+                this.blocks.forEach(block => {
+                    code += `    ${block.type}\n`;
+                    Object.entries(block.props).forEach(([key, value]) => {
+                        code += `        ${key}: ${value}\n`;
+                    });
+                });
+                
+                code += `END`;
+                
+                document.getElementById('codeOutput').textContent = code;
+            },
+
+            newPipeline() {
+                this.blocks = [];
+                document.getElementById('pipelineName').value = 'my_pipeline';
+                document.getElementById('sourceInput').value = '""';
+                this.render();
+            },
+
+            clearPipeline() {
+                if (confirm('Clear all blocks?')) {
+                    this.blocks = [];
+                    this.render();
+                }
+            },
+
+            loadExample(key) {
+                const example = this.examples[key];
+                if (example) {
+                    document.getElementById('pipelineName').value = example.pipelineName;
+                    document.getElementById('sourceInput').value = example.source;
+                    this.blocks = example.blocks.map((b, i) => ({
+                        id: Date.now() + i,
+                        ...b
+                    }));
+                    this.closeModal();
+                    this.render();
+                }
+            },
+
+            showExamples() {
+                const modal = document.getElementById('examplesModal');
+                const modalBody = modal.querySelector('.modal-body');
+                
+                modalBody.innerHTML = `
+                    ${Object.entries(this.examples).map(([key, ex]) => `
+                        <div class="example-item" onclick="app.loadExample('${key}')">
+                            <div class="example-name">${ex.name}</div>
+                            <div class="example-desc">${ex.blocks.length} block(s)</div>
+                        </div>
+                    `).join('')}
+                `;
+                
+                modal.classList.add('active');
+            },
+
+            closeModal() {
+                document.getElementById('examplesModal').classList.remove('active');
+            },
+
+            exportCode() {
+                const code = document.getElementById('codeOutput').textContent;
+                const element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(code));
+                element.setAttribute('download', `${document.getElementById('pipelineName').value}.vf`);
+                element.style.display = 'none';
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element);
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            app.render();
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('examplesModal').addEventListener('click', (e) => {
+            if (e.target.id === 'examplesModal') {
+                app.closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
