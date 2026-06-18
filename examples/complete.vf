@@ -1,0 +1,10 @@
+PIPELINE full_video_pipeline
+    SOURCE "videos/*.mp4"
+    ASPECT_RATIO
+        target: 16:9
+        mode: pad
+    FRAME_RATE
+        target: 30fps
+    LENS
+        correct_distortion: true
+END

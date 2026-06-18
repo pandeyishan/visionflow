@@ -1,0 +1,6 @@
+PIPELINE simple_video_prep
+    SOURCE "sample_videos/*.mp4"
+    ASPECT_RATIO
+        target: 16:9
+        mode: fit
+END
