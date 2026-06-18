@@ -1,0 +1,10 @@
+PIPELINE video_preprocessing
+    SOURCE "videos/*.mp4"
+    ASPECT_RATIO
+        target: 16:9
+        mode: fit
+    FRAME_RATE
+        target: 30fps
+    LENS
+        correct_distortion: true
+END

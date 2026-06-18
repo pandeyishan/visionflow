@@ -1,0 +1,6 @@
+PIPELINE image_sequence
+    SOURCE "photos/*.jpg"
+    ASPECT_RATIO
+        target: 4:3
+        mode: pad
+END
