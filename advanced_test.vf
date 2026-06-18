@@ -1,0 +1,8 @@
+PIPELINE advanced_demo
+    SOURCE "sample_images/test_image*.jpg"
+    ASPECT_RATIO
+        target: 16:9
+        mode: fit
+    LENS
+        correct_distortion: true
+END

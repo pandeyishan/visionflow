@@ -1,0 +1,6 @@
+PIPELINE demo_preprocessing
+    SOURCE "sample_videos/test_video.mp4"
+    ASPECT_RATIO
+        target: 16:9
+        mode: fit
+END

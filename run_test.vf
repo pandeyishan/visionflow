@@ -1,0 +1,6 @@
+PIPELINE test_image_processing
+    SOURCE "sample_images/test_image*.jpg"
+    ASPECT_RATIO
+        target: 16:9
+        mode: pad
+END
