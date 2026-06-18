@@ -19,6 +19,8 @@ class Parser:
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
     def consume(self, expected_type=None):
+        if self.pos >= len(self.tokens):
+            raise SyntaxError(f"Unexpected end of file, expected {expected_type}")
         tok = self.tokens[self.pos]
         if expected_type and tok.type != expected_type:
             raise SyntaxError(f"Expected {expected_type}, got {tok.type} at line {tok.line}")
@@ -29,14 +31,22 @@ class Parser:
         self.consume('KEYWORD')  # PIPELINE
         name = self.consume('IDENT').value
         node = PipelineNode(name)
+        self.skip_newlines()  # Skip newlines after pipeline name
         while self.peek() and self.peek().value != 'END':
             self.skip_newlines()
             tok = self.peek()
+            if not tok:
+                break
             if tok.value == 'SOURCE':
                 self.consume(); node.source = self.consume('STRING').value.strip('"')
             elif tok.type == 'KEYWORD':
                 node.blocks.append(self.parse_block())
-        self.consume('KEYWORD')  # END
+            else:
+                # Skip unexpected tokens to prevent infinite loop
+                self.consume()
+        # Consume END if it exists, otherwise it's okay
+        if self.peek() and self.peek().value == 'END':
+            self.consume('KEYWORD')  # END
         return node
 
     def parse_block(self):
