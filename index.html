@@ -457,6 +457,144 @@
             font-size: 0.8rem;
         }
 
+        .execution-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: var(--bg-dark);
+            border-left: 2px solid var(--border-color);
+            transition: right 0.3s;
+            overflow-y: auto;
+            z-index: 100;
+            padding: 2rem 1.5rem;
+        }
+
+        .execution-panel.active {
+            right: 0;
+        }
+
+        .execution-panel h3 {
+            color: #4ade80;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        .execution-output {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #10b981;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .execution-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .execution-output::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        .execution-output::-webkit-scrollbar-thumb {
+            background: #374151;
+        }
+
+        .execution-output.running {
+            border-color: #4ade80;
+        }
+
+        .execution-output.error {
+            color: #ef4444;
+            border-color: #dc2626;
+        }
+
+        .execution-output.success {
+            color: #4ade80;
+            border-color: #059669;
+        }
+
+        .execution-files {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .execution-files h4 {
+            color: #60a5fa;
+            margin: 0 0 0.75rem 0;
+            font-size: 0.9rem;
+        }
+
+        .file-item {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 0.25rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .file-item strong {
+            color: #4ade80;
+        }
+
+        .file-item .size {
+            color: #9ca3af;
+            font-size: 0.75rem;
+        }
+
+        .close-execution {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .close-execution:hover {
+            color: #fff;
+        }
+
+        .execution-status {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .execution-status.running {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .execution-status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .execution-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
         /* Toolbar */
         .toolbar {
             display: flex;
@@ -574,6 +712,7 @@
         <div class="toolbar">
             <button class="btn-primary" onclick="app.newPipeline()">New Pipeline</button>
             <button class="btn-secondary" onclick="app.clearPipeline()">Clear</button>
+            <button class="btn-success" onclick="app.runPipeline()" style="margin-left: auto;">▶ Run Pipeline</button>
         </div>
 
         <!-- Main Grid -->
@@ -698,6 +837,27 @@ END
                 <button class="btn-secondary" onclick="app.closeModal()">Close</button>
             </div>
         </div>
+    </div>
+
+    <!-- Execution Panel -->
+    <div id="executionPanel" class="execution-panel">
+        <button class="close-execution" onclick="app.closeExecutionPanel()">✕</button>
+        <h3>Execution Results</h3>
+        
+        <div id="executionStatus" class="execution-status" style="display:none;"></div>
+        
+        <div class="execution-output" id="executionOutput">
+Ready to execute...
+        </div>
+        
+        <div class="execution-files">
+            <h4>📁 Output Files</h4>
+            <div id="executionFiles">
+                <div class="file-item">No files yet</div>
+            </div>
+        </div>
+        
+        <button class="btn-secondary" onclick="app.closeExecutionPanel()" style="width: 100%;">Close Panel</button>
     </div>
 
     <script>
@@ -985,7 +1145,92 @@ END
                 
                 // Show success message
                 alert(`✓ Downloaded: ${filename}\n\nNext: Run\npython main.py ${filename}`);
-            }
+            },
+
+            async runPipeline() {
+                const source = document.getElementById('sourceInput').value;
+                
+                if (!this.validateSource()) {
+                    alert('⚠️ Please set a valid SOURCE path first!');
+                    return;
+                }
+                
+                // Open execution panel
+                document.getElementById('executionPanel').classList.add('active');
+                const outputEl = document.getElementById('executionOutput');
+                const statusEl = document.getElementById('executionStatus');
+                const filesEl = document.getElementById('executionFiles');
+                
+                // Show running status
+                outputEl.className = 'execution-output running';
+                statusEl.className = 'execution-status running';
+                statusEl.style.display = 'block';
+                statusEl.innerHTML = '⏳ Running pipeline...';
+                outputEl.innerHTML = 'Initializing...\n';
+                filesEl.innerHTML = '<div class="file-item">Processing...</div>';
+                
+                try {
+                    const code = document.getElementById('codeOutput').textContent;
+                    
+                    // Send to server
+                    const response = await fetch('http://localhost:5000/api/execute', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            code: code,
+                            source: source
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    // Display output
+                    outputEl.innerHTML = result.output.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    outputEl.scrollTop = outputEl.scrollHeight;
+                    
+                    if (result.success) {
+                        outputEl.className = 'execution-output success';
+                        statusEl.className = 'execution-status success';
+                        statusEl.innerHTML = '✓ Pipeline executed successfully!';
+                        
+                        // Display files
+                        if (result.files && result.files.length > 0) {
+                            filesEl.innerHTML = result.files.map(f => `
+                                <div class="file-item">
+                                    <strong>📄 ${f}</strong>
+                                    <div class="size" style="margin-top: 0.25rem;">processed_output/${f}</div>
+                                </div>
+                            `).join('');
+                        } else {
+                            filesEl.innerHTML = '<div class="file-item">No output files generated</div>';
+                        }
+                    } else {
+                        outputEl.className = 'execution-output error';
+                        statusEl.className = 'execution-status error';
+                        statusEl.innerHTML = '✗ Pipeline execution failed';
+                        filesEl.innerHTML = '<div class="file-item">Error - see output above</div>';
+                    }
+                    
+                } catch (error) {
+                    outputEl.className = 'execution-output error';
+                    statusEl.className = 'execution-status error';
+                    statusEl.innerHTML = '✗ Server connection error';
+                    
+                    let errorMsg = `[ERROR] Cannot connect to server\n\n`;
+                    errorMsg += `Make sure the server is running:\n`;
+                    errorMsg += `python server.py\n\n`;
+                    errorMsg += `Then try again.`;
+                    
+                    outputEl.innerHTML = errorMsg;
+                    filesEl.innerHTML = `<div class="file-item" style="color: #ef4444;">Server not running</div>`;
+                }
+            },
+
+            closeExecutionPanel() {
+                document.getElementById('executionPanel').classList.remove('active');
+            },
         };
 
         // Initialize
